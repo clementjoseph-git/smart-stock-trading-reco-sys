@@ -8,16 +8,15 @@ class HuggingFaceInferenceError(Exception):
 
 
 class HuggingFaceInference:
-    def __init__(self, token=None, model=None, session=None, timeout=30):
+    def __init__(self, token=None, model=None, endpoint=None, session=None, timeout=30):
         self.token = token or os.getenv("HF_API_TOKEN")
-        self.model = model or os.getenv(
-            "HF_SENTIMENT_MODEL", "ProsusAI/finbert"
-        )
+        self.model = model or os.getenv("HF_SENTIMENT_MODEL", "ProsusAI/finbert")
         self.session = session or requests
         self.timeout = timeout
-        self.endpoint = os.getenv(
+        self.endpoint = endpoint or os.getenv(
             "HF_INFERENCE_URL", "https://router.huggingface.co/hf-inference/models"
         )
+        self.dedicated_endpoint = endpoint is not None
 
     def classify(self, text):
         result = self.predict({"inputs": text})
@@ -37,8 +36,9 @@ class HuggingFaceInference:
             raise HuggingFaceInferenceError("A Hugging Face model is not configured")
 
         try:
+            url = self.endpoint if self.dedicated_endpoint else f"{self.endpoint}/{selected_model}"
             response = self.session.post(
-                f"{self.endpoint}/{selected_model}",
+                url,
                 headers={"Authorization": f"Bearer {self.token}"},
                 json=payload,
                 timeout=self.timeout,
@@ -82,12 +82,19 @@ class HuggingFaceSentiment:
 class HuggingFaceNumericModel:
     def __init__(self, task, inference=None, model=None):
         self.task = task
-        self.inference = inference or HuggingFaceInference(model=model)
         self.model = model or os.getenv(f"HF_{task.upper()}_MODEL")
+        endpoint = os.getenv(f"HF_{task.upper()}_ENDPOINT")
+        self.inference = inference or HuggingFaceInference(
+            model=self.model, endpoint=endpoint
+        )
 
     def predict(self, values):
+        if not self.model:
+            raise HuggingFaceInferenceError(
+                f"HF_{self.task.upper()}_MODEL is not configured"
+            )
         result = self.inference.predict(
-            {"inputs": {"data": values, "task": self.task}}, self.model
+            {"inputs": values}, self.model
         )
         if isinstance(result, dict):
             result = result.get("forecast", result.get("predictions", result.get("outputs")))
@@ -106,8 +113,29 @@ class HuggingFaceNumericModel:
 
 
 class HuggingFaceForecast(HuggingFaceNumericModel):
-    def __init__(self, inference=None, model=None):
+    def __init__(self, inference=None, model=None, horizon=None):
         super().__init__("forecast", inference=inference, model=model)
+        self.horizon = horizon or int(os.getenv("HF_FORECAST_HORIZON", "5"))
+
+    def predict(self, values):
+        if not self.model:
+            raise HuggingFaceInferenceError("HF_FORECAST_MODEL is not configured")
+        result = self.inference.predict(
+            {"inputs": values, "parameters": {"prediction_length": self.horizon}},
+            self.model,
+        )
+        if isinstance(result, dict):
+            result = result.get("forecast", result.get("predictions", result.get("outputs")))
+        if isinstance(result, list) and result and isinstance(result[0], dict):
+            result = [item.get("value", item.get("score")) for item in result]
+        if not isinstance(result, list) or not result:
+            raise HuggingFaceInferenceError("Hugging Face returned an unexpected forecast response")
+        try:
+            return [float(value) for value in result]
+        except (TypeError, ValueError) as error:
+            raise HuggingFaceInferenceError(
+                "Hugging Face returned non-numeric forecast values"
+            ) from error
 
 
 class HuggingFaceFundamentals(HuggingFaceNumericModel):

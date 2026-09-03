@@ -52,8 +52,8 @@ def test_huggingface_requires_server_side_token():
 
 class FakeNumericInference:
     def predict(self, payload, model=None):
-        assert payload["inputs"]["data"] == [100.0, 101.0]
-        assert payload["inputs"]["task"] == "forecast"
+        assert payload["inputs"] == [100.0, 101.0]
+        assert payload["parameters"]["prediction_length"] == 5
         assert model == "forecast-model"
         return {"forecast": [102.0, 103.0]}
 
@@ -68,8 +68,7 @@ def test_huggingface_forecast_normalizes_numeric_response():
 
 class FakeFundamentalsInference:
     def predict(self, payload, model=None):
-        assert payload["inputs"]["data"] == [[1.0, 2.0]]
-        assert payload["inputs"]["task"] == "fundamentals"
+        assert payload["inputs"] == [[1.0, 2.0]]
         return {"predictions": [{"value": 10.0}]}
 
 

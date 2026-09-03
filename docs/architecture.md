@@ -31,7 +31,7 @@ flowchart LR
     ML --> API
 ```
 
-The first market-data provider is Yahoo Finance through `backend/services/market_data.py`. The API normalizes its chart response into timestamped OHLCV records. Sentiment, forecasting, and fundamentals inference are routed through configurable hosted Hugging Face models in `backend/services/huggingface.py`; the token remains server-side. Database persistence and additional providers remain planned.
+The first market-data provider is Yahoo Finance through `backend/services/market_data.py`. The API normalizes its chart response into timestamped OHLCV records. Sentiment, forecasting, and fundamentals inference are routed through configurable hosted Hugging Face models in `backend/services/huggingface.py`; the token remains server-side. FinBERT is verified for serverless text classification; numeric models require dedicated endpoint URLs and task-specific handlers. Database persistence and additional providers remain planned.
 
 ## Request Flow
 

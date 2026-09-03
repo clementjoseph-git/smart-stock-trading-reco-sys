@@ -20,7 +20,7 @@ Market data providers should be accessed through a dedicated ingestion layer, wi
 
 ### Forecasting
 
-- The project currently includes an LSTM forecaster in `ml/technicals/lstm_forecaster.py`.
+- The project uses hosted inference for forecasting. [Amazon Chronos-T5 Tiny](https://huggingface.co/amazon/chronos-t5-tiny) is the selected model artifact. Its model card documents a numeric context and `prediction_length`; it is not currently deployed by an Inference Provider, so use a dedicated Hugging Face Endpoint with a compatible handler.
 - [TensorFlow LSTM for Stock Forecasting](https://www.tensorflow.org/tutorials/structured_data/time_series) covers recurrent time-series forecasting concepts.
 - ARIMA is a potential statistical forecasting alternative. It is not currently listed as an installed dependency or implemented model.
 - [Informer](https://huggingface.co/thuml/informer) is a potential transformer-based time-series alternative.
@@ -28,8 +28,8 @@ Market data providers should be accessed through a dedicated ingestion layer, wi
 
 ### Fundamentals
 
-- The current fundamentals implementation uses [scikit-learn](https://scikit-learn.org/stable/) linear regression in `ml/fundamentals/fundamentals_pipeline.py`.
-- The fundamentals workflow accepts a feature matrix and target values, trains the regression model, and returns predictions.
+- Fundamentals inference requires a task-specific hosted model or dedicated endpoint trained for the project feature schema. Hugging Face does not provide a universal serverless tabular-regression contract for arbitrary `X` and `y` payloads.
+- The endpoint contract is `inputs` containing the feature matrix, with numeric predictions returned by the configured handler.
 
 ### Portfolio Optimization
 
