@@ -82,3 +82,11 @@ export async function analyzeRecommendation(data) {
     body: JSON.stringify(data)
   });
 }
+
+export async function analyzeLiveRecommendation(data) {
+  return request("/recommendation/live", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+}

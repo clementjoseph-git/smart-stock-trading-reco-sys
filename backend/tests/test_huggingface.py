@@ -69,6 +69,7 @@ def test_huggingface_forecast_normalizes_numeric_response():
 class FakeFundamentalsInference:
     def predict(self, payload, model=None):
         assert payload["inputs"] == [[1.0, 2.0]]
+        assert payload["parameters"]["task"] == "fundamentals"
         return {"predictions": [{"value": 10.0}]}
 
 

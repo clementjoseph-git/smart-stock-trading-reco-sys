@@ -157,6 +157,50 @@ def test_structured_recommendation_rejects_short_prices():
     assert response.status_code == 422
 
 
+def test_live_recommendation_fetches_and_combines_market_data(monkeypatch):
+    class FakeMarketDataProvider:
+        def get_history(self, symbol, period, interval):
+            return {
+                "symbol": symbol.upper(),
+                "source": "fake",
+                "period": period,
+                "interval": interval,
+                "data": [{"close": 100.0}, {"close": 101.0}, {"close": 102.0}],
+            }
+
+    class FakeModel:
+        def __init__(self, result):
+            self.result = result
+
+        def analyze(self, text):
+            assert text == "Earnings beat expectations"
+            return self.result
+
+        def predict(self, values):
+            return self.result
+
+    monkeypatch.setattr(main, "market_data_provider", FakeMarketDataProvider())
+    monkeypatch.setattr(
+        main, "sentiment_model", FakeModel({"Positive": 0.8, "Negative": 0.1, "Neutral": 0.1})
+    )
+    monkeypatch.setattr(main, "forecast_model", FakeModel([103.0]))
+    monkeypatch.setattr(main, "fundamentals_model", FakeModel([1.0]))
+
+    response = client.post(
+        "/recommendation/live",
+        json={
+            "symbol": "AAPL",
+            "text": "Earnings beat expectations",
+            "fundamentals": [[1.0, 2.0]],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["symbol"] == "AAPL"
+    assert response.json()["market_data"]["source"] == "fake"
+    assert response.json()["evidence"]["current_price"] == 102.0
+
+
 def test_sentiment_accepts_json_body(monkeypatch):
     monkeypatch.setattr(main, "sentiment_model", FakeSentimentModel())
 

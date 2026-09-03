@@ -78,6 +78,19 @@ class AnalysisRecommendationRequest(BaseModel):
     fundamentals: list[float] = Field(min_length=1)
 
 
+class LiveRecommendationRequest(BaseModel):
+    symbol: str = Field(min_length=1, max_length=20)
+    text: str = Field(min_length=1)
+    fundamentals: list[list[float]] = Field(min_length=1)
+    period: str = Field(
+        default="1mo", pattern="^(1d|5d|1mo|3mo|6mo|1y|2y|5y|max)$"
+    )
+    interval: str = Field(
+        default="1d", pattern="^(1m|5m|15m|30m|60m|90m|1d|5d|1wk|1mo|3mo)$"
+    )
+    persist: bool = False
+
+
 def _allowed_origins():
     configured_origins = os.getenv("CORS_ORIGINS")
     if configured_origins:
@@ -252,3 +265,39 @@ def analyze_recommendation(request: AnalysisRecommendationRequest):
         },
         "indicators": indicators,
     }
+
+
+@app.post("/recommendation/live")
+def live_recommendation(request: LiveRecommendationRequest):
+    try:
+        if request.persist:
+            raw_payload, market_data = market_data_provider.fetch_history(
+                request.symbol, request.period, request.interval
+            )
+            market_data["persisted"] = market_data_storage.save(
+                request.symbol, raw_payload, market_data
+            )
+        else:
+            market_data = market_data_provider.get_history(
+                request.symbol, request.period, request.interval
+            )
+        prices = [record["close"] for record in market_data["data"]]
+        sentiment_result = _get_sentiment_model().analyze(request.text)
+        forecast_result = _get_forecast_model().predict(prices)
+        fundamentals_result = _get_fundamentals_model().predict(request.fundamentals)
+        result = analyze_recommendation(
+            AnalysisRecommendationRequest(
+                sentiment=sentiment_result,
+                prices=prices,
+                forecast=forecast_result,
+                fundamentals=fundamentals_result,
+            )
+        )
+        result["symbol"] = market_data["symbol"]
+        result["market_data"] = market_data
+        return result
+    except MarketDataError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    except HuggingFaceInferenceError as error:
+        status_code = 429 if "rate limit" in str(error).lower() else 502
+        raise HTTPException(status_code=status_code, detail=str(error)) from error

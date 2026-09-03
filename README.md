@@ -52,6 +52,7 @@ smart-stock-trading-reco-sys/
 - **Portfolio:** `POST /portfolio` calculates portfolio weights from expected returns and a covariance matrix.
 - **Recommendation:** `POST /recommendation` combines normalized analysis scores into a Buy, Hold, or Sell signal with confidence and rationale.
 - **Structured recommendation:** `POST /recommendation/analyze` derives scores from sentiment, price history, forecasts, and fundamental predictions.
+- **Live recommendation:** `POST /recommendation/live` fetches market history automatically and composes hosted model outputs.
 
 The web dashboard includes a Recommendation view for submitting these analysis values and displaying the signal, confidence, risk score, target price, stop-loss, and rationale.
 
@@ -70,4 +71,5 @@ The web client reads environment-specific API settings from `frontend/web/.env`.
 - [System architecture](docs/architecture.md)
 - [Skills index](docs/skills.md)
 - [Resources and references](docs/resources.md)
+- [Hosted Hugging Face endpoint contracts](docs/huggingface-endpoints.md)
 - [API and workflow prompts](docs/prompts/)

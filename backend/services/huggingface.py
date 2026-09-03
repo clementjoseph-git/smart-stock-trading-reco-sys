@@ -94,7 +94,7 @@ class HuggingFaceNumericModel:
                 f"HF_{self.task.upper()}_MODEL is not configured"
             )
         result = self.inference.predict(
-            {"inputs": values}, self.model
+            {"inputs": values, "parameters": {"task": self.task}}, self.model
         )
         if isinstance(result, dict):
             result = result.get("forecast", result.get("predictions", result.get("outputs")))

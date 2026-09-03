@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { Alert, Button, CircularProgress, TextField, Typography } from "@mui/material";
-import { analyzeRecommendation } from "../services/api";
+import { analyzeLiveRecommendation, analyzeRecommendation } from "../services/api";
 
 function parseNumbers(value) {
   return value.split(",").map((item) => Number(item.trim()));
 }
 
 function Recommendation() {
+  const [symbol, setSymbol] = useState("AAPL");
+  const [headline, setHeadline] = useState("Earnings and business update");
   const [sentiment, setSentiment] = useState({ Positive: "0.33", Negative: "0.33", Neutral: "0.34" });
   const [prices, setPrices] = useState("100, 101, 102, 103, 104");
   const [forecast, setForecast] = useState("105, 106");
@@ -35,9 +37,28 @@ function Recommendation() {
     }
   };
 
+  const handleLiveAnalyze = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await analyzeLiveRecommendation({
+        symbol,
+        text: headline,
+        fundamentals: [parseNumbers(fundamentals)]
+      });
+      setResult(response);
+    } catch (err) {
+      setError(`Failed to generate live recommendation: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
       <Typography variant="h5">AI Recommendation</Typography>
+      <TextField label="Stock symbol" value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} margin="normal" />
+      <TextField label="News headline" value={headline} onChange={(event) => setHeadline(event.target.value)} fullWidth margin="normal" />
       {Object.keys(sentiment).map((key) => (
         <TextField
           key={key}
@@ -54,6 +75,9 @@ function Recommendation() {
       <TextField label="Fundamental predictions" value={fundamentals} onChange={(event) => setFundamentals(event.target.value)} fullWidth margin="normal" />
       <Button variant="contained" onClick={handleAnalyze} disabled={loading}>
         {loading ? "Analyzing..." : "Generate recommendation"}
+      </Button>
+      <Button variant="outlined" onClick={handleLiveAnalyze} disabled={loading} sx={{ ml: 1 }}>
+        Use live market data
       </Button>
       {loading && <CircularProgress size={24} sx={{ ml: 2, verticalAlign: "middle" }} />}
       {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
