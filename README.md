@@ -45,6 +45,7 @@ smart-stock-trading-reco-sys/
 
 ## Analysis Workflows
 
+- **Market data:** `GET /market-data/{symbol}` retrieves normalized OHLCV history from Yahoo Finance.
 - **Sentiment:** `POST /sentiment` analyzes financial text with the FinBERT model.
 - **Forecast:** `POST /forecast` predicts values from a numeric time series.
 - **Fundamentals:** `POST /fundamentals` trains and evaluates a regression model using `X` and `y`.

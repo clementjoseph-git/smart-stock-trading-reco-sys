@@ -36,7 +36,7 @@ The project separates trading workflows into domain-specific skills. The intende
 
 | Skill | Intended entry point | Current implementation | Primary input | Primary output |
 | --- | --- | --- | --- | --- |
-| Data ingestion | `skills/data_ingestion.py` | Not implemented | Market or source data | Raw and processed datasets |
+| Data ingestion | `skills/data_ingestion.py` | `backend/services/market_data.py` | Symbol, period, and interval | Normalized OHLCV history |
 | Sentiment analysis | `skills/sentiment_analysis.py` | `ml/sentiment/finbert_pipeline.py` | Financial text | Sentiment result |
 | Technical analysis | `skills/technical_analysis.py` | `ml/technicals/lstm_forecaster.py` | Numeric price series | Forecast values |
 | Fundamental analysis | `skills/fundamental_analysis.py` | `ml/fundamentals/fundamentals_pipeline.py` | Feature matrix `X`, targets `y` | Prediction values |
@@ -44,7 +44,7 @@ The project separates trading workflows into domain-specific skills. The intende
 
 ## Data Ingestion
 
-The intended responsibility of the data ingestion skill is to acquire, clean, and prepare market data for analysis. The current `skills/data_ingestion.py` file is empty, so ingestion is not currently exposed as a working skill or API endpoint.
+The data ingestion skill acquires and normalizes market data for analysis. The skill entry point in `skills/data_ingestion.py` remains a placeholder, but the first working provider is implemented in `backend/services/market_data.py` and exposed through `GET /market-data/{symbol}`.
 
 Expected stages are:
 

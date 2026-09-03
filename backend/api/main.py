@@ -1,41 +1,158 @@
-from fastapi import FastAPI
-from ml.sentiment.finbert_pipeline import FinBERTSentiment
-from ml.technicals.lstm_forecaster import LSTMForecaster
-from ml.fundamentals.fundamentals_pipeline import FundamentalsModel
-from ml.portfolio.portfolio_optimizer import PortfolioOptimizer
+import os
+
+import numpy as np
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field, model_validator
+
+from backend.services.market_data import MarketDataError, YahooFinanceProvider
+from backend.services.market_data_storage import MarketDataStorage
+
+
+class SentimentRequest(BaseModel):
+    text: str = Field(min_length=1)
+
+
+class ForecastRequest(BaseModel):
+    data: list[float] = Field(min_length=1)
+
+
+class FundamentalsRequest(BaseModel):
+    X: list[list[float]] = Field(min_length=1)
+    y: list[float] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_training_data(self):
+        if len(self.X) != len(self.y):
+            raise ValueError("X and y must contain the same number of rows")
+        if not self.X[0]:
+            raise ValueError("X must contain at least one feature")
+        feature_count = len(self.X[0])
+        if any(len(row) != feature_count for row in self.X):
+            raise ValueError("X must be rectangular")
+        return self
+
+
+class PortfolioRequest(BaseModel):
+    returns: list[float] = Field(min_length=1)
+    cov_matrix: list[list[float]] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_covariance_matrix(self):
+        asset_count = len(self.returns)
+        if len(self.cov_matrix) != asset_count:
+            raise ValueError("cov_matrix must have one row per asset")
+        if any(len(row) != asset_count for row in self.cov_matrix):
+            raise ValueError("cov_matrix must be square and match returns")
+        return self
+
+
+def _allowed_origins():
+    configured_origins = os.getenv("CORS_ORIGINS")
+    if configured_origins:
+        return [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
+    return ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 
 app = FastAPI(title="Smart Stock Trading Recommendation System")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Initialize models
-sentiment_model = FinBERTSentiment()
-forecast_model = LSTMForecaster()
-fundamentals_model = FundamentalsModel()
-# Portfolio optimizer will be initialized dynamically with data
+sentiment_model = None
+forecast_model = None
+fundamentals_model = None
+market_data_provider = YahooFinanceProvider()
+market_data_storage = MarketDataStorage()
+
+
+def _get_sentiment_model():
+    global sentiment_model
+    if sentiment_model is None:
+        from ml.sentiment.finbert_pipeline import FinBERTSentiment
+
+        sentiment_model = FinBERTSentiment()
+    return sentiment_model
+
+
+def _get_forecast_model():
+    global forecast_model
+    if forecast_model is None:
+        from ml.technicals.lstm_forecaster import LSTMForecaster
+
+        forecast_model = LSTMForecaster()
+    return forecast_model
+
+
+def _get_fundamentals_model():
+    global fundamentals_model
+    if fundamentals_model is None:
+        from ml.fundamentals.fundamentals_pipeline import FundamentalsModel
+
+        fundamentals_model = FundamentalsModel()
+    return fundamentals_model
+
 
 @app.get("/")
 def root():
     return {"message": "SmartTrade AI backend is running"}
 
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/market-data/{symbol}")
+def get_market_data(
+    symbol: str,
+    period: str = Query("1mo", pattern="^(1d|5d|1mo|3mo|6mo|1y|2y|5y|max)$"),
+    interval: str = Query("1d", pattern="^(1m|5m|15m|30m|60m|90m|1d|5d|1wk|1mo|3mo)$"),
+    persist: bool = False,
+):
+    try:
+        if persist:
+            raw_payload, normalized_data = market_data_provider.fetch_history(
+                symbol, period, interval
+            )
+            normalized_data["persisted"] = market_data_storage.save(
+                symbol, raw_payload, normalized_data
+            )
+            return normalized_data
+        return market_data_provider.get_history(symbol, period, interval)
+    except MarketDataError as error:
+        status_code = 404 if str(error).startswith("Symbol not found") else 502
+        raise HTTPException(status_code=status_code, detail=str(error)) from error
+
+
 @app.post("/sentiment")
-def analyze_sentiment(text: str):
-    return sentiment_model.analyze(text)
+def analyze_sentiment(request: SentimentRequest):
+    return _get_sentiment_model().analyze(request.text)
+
 
 @app.post("/forecast")
-def forecast_stock(data: list[float]):
-    # Expecting a list of floats representing time-series
-    import numpy as np
-    X_input = np.array(data).reshape(1, len(data), 1)
-    prediction = forecast_model.predict(X_input)
-    return {"forecast": prediction.tolist()}
+def forecast_stock(request: ForecastRequest):
+    model_input = np.array(request.data).reshape(1, len(request.data), 1)
+    prediction = _get_forecast_model().predict(model_input)
+    return {"forecast": np.asarray(prediction).tolist()}
+
 
 @app.post("/fundamentals")
-def fundamentals_analysis(X: list[list[float]], y: list[float]):
-    fundamentals_model.train(X, y)
-    prediction = fundamentals_model.predict(X)
-    return {"prediction": prediction.tolist()}
+def fundamentals_analysis(request: FundamentalsRequest):
+    model = _get_fundamentals_model()
+    model.train(request.X, request.y)
+    prediction = model.predict(request.X)
+    return {"prediction": np.asarray(prediction).tolist()}
+
 
 @app.post("/portfolio")
-def optimize_portfolio(returns: list[float], cov_matrix: list[list[float]]):
-    optimizer = PortfolioOptimizer(returns, cov_matrix)
+def optimize_portfolio(request: PortfolioRequest):
+    from ml.portfolio.portfolio_optimizer import PortfolioOptimizer
+
+    optimizer = PortfolioOptimizer(request.returns, request.cov_matrix)
     weights = optimizer.optimize()
-    return {"weights": weights.tolist()}
+    return {"weights": np.asarray(weights).tolist()}

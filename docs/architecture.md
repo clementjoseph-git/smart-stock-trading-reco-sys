@@ -31,7 +31,7 @@ flowchart LR
     ML --> API
 ```
 
-The market data source connection is a planned boundary. The current API accepts analysis inputs directly; it does not yet implement a database or a Yahoo Finance or Alpha Vantage client.
+The first market-data provider is Yahoo Finance through `backend/services/market_data.py`. The API normalizes its chart response into timestamped OHLCV records. Database persistence and additional providers remain planned.
 
 ## Request Flow
 
@@ -49,6 +49,7 @@ The API entry point is `backend/api/main.py`. It initializes the sentiment, fore
 | Method | Endpoint | Request values | Response |
 | --- | --- | --- | --- |
 | `GET` | `/` | None | Service status message |
+| `GET` | `/market-data/{symbol}` | `period`, `interval` query parameters | Normalized OHLCV history |
 | `POST` | `/sentiment` | `text` string | Model sentiment result |
 | `POST` | `/forecast` | Numeric `data` time series | `{ "forecast": [...] }` |
 | `POST` | `/fundamentals` | Feature matrix `X`, targets `y` | `{ "prediction": [...] }` |

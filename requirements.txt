@@ -2,11 +2,13 @@ numpy
 pandas
 scikit-learn
 xgboost
+tensorflow
 torch
 transformers
 datasets
 fastapi
 uvicorn
+pytest
 scrapy
 beautifulsoup4
 requests

@@ -4,6 +4,7 @@ import {
   Drawer,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   Toolbar,
   AppBar,
@@ -41,17 +42,25 @@ function App() {
         >
           <Toolbar />
           <List>
-            <ListItem button component={Link} to="/sentiment">
-              <ListItemText primary="Sentiment Analysis" />
+            <ListItem disablePadding>
+              <ListItemButton component={Link} to="/sentiment">
+                <ListItemText primary="Sentiment Analysis" />
+              </ListItemButton>
             </ListItem>
-            <ListItem button component={Link} to="/forecast">
-              <ListItemText primary="Forecast" />
+            <ListItem disablePadding>
+              <ListItemButton component={Link} to="/forecast">
+                <ListItemText primary="Forecast" />
+              </ListItemButton>
             </ListItem>
-            <ListItem button component={Link} to="/fundamentals">
-              <ListItemText primary="Fundamentals" />
+            <ListItem disablePadding>
+              <ListItemButton component={Link} to="/fundamentals">
+                <ListItemText primary="Fundamentals" />
+              </ListItemButton>
             </ListItem>
-            <ListItem button component={Link} to="/portfolio">
-              <ListItemText primary="Portfolio" />
+            <ListItem disablePadding>
+              <ListItemButton component={Link} to="/portfolio">
+                <ListItemText primary="Portfolio" />
+              </ListItemButton>
             </ListItem>
           </List>
         </Drawer>

@@ -26,7 +26,11 @@ async function request(endpoint, options = {}) {
  * @param {string} text - headline or sentence
  */
 export async function analyzeSentiment(text) {
-  return request(`/sentiment?text=${encodeURIComponent(text)}`, { method: "POST" });
+  return request("/sentiment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text })
+  });
 }
 
 /**
