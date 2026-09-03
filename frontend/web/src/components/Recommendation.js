@@ -45,7 +45,6 @@ function Recommendation() {
           value={sentiment[key]}
           onChange={(event) => setSentiment({ ...sentiment, [key]: event.target.value })}
           type="number"
-          inputProps={{ min: 0, max: 1, step: 0.01 }}
           margin="normal"
           sx={{ mr: 1 }}
         />
