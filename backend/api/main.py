@@ -8,6 +8,10 @@ from pydantic import BaseModel, Field, model_validator
 
 from backend.services.market_data import MarketDataError, YahooFinanceProvider
 from backend.services.market_data_storage import MarketDataStorage
+from backend.services.huggingface import (
+    HuggingFaceInferenceError,
+    HuggingFaceSentiment,
+)
 from backend.services.analysis import (
     fundamental_score,
     moving_average_convergence_divergence,
@@ -98,9 +102,7 @@ market_data_storage = MarketDataStorage()
 def _get_sentiment_model():
     global sentiment_model
     if sentiment_model is None:
-        from ml.sentiment.finbert_pipeline import FinBERTSentiment
-
-        sentiment_model = FinBERTSentiment()
+        sentiment_model = HuggingFaceSentiment()
     return sentiment_model
 
 
@@ -156,7 +158,11 @@ def get_market_data(
 
 @app.post("/sentiment")
 def analyze_sentiment(request: SentimentRequest):
-    return _get_sentiment_model().analyze(request.text)
+    try:
+        return _get_sentiment_model().analyze(request.text)
+    except HuggingFaceInferenceError as error:
+        status_code = 429 if "rate limit" in str(error).lower() else 502
+        raise HTTPException(status_code=status_code, detail=str(error)) from error
 
 
 @app.post("/forecast")

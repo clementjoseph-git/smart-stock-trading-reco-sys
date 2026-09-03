@@ -56,7 +56,7 @@ Expected stages are:
 
 ## Sentiment Analysis
 
-The sentiment workflow accepts a headline or other financial text and delegates analysis to the FinBERT-based implementation in `ml/sentiment/finbert_pipeline.py`.
+The sentiment workflow accepts a headline or other financial text and delegates analysis to the hosted Hugging Face gateway in `backend/services/huggingface.py`.
 
 - **Input:** `text` string
 - **API endpoint:** `POST /sentiment`
