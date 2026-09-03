@@ -50,6 +50,10 @@ smart-stock-trading-reco-sys/
 - **Forecast:** `POST /forecast` predicts values from a numeric time series.
 - **Fundamentals:** `POST /fundamentals` trains and evaluates a regression model using `X` and `y`.
 - **Portfolio:** `POST /portfolio` calculates portfolio weights from expected returns and a covariance matrix.
+- **Recommendation:** `POST /recommendation` combines normalized analysis scores into a Buy, Hold, or Sell signal with confidence and rationale.
+- **Structured recommendation:** `POST /recommendation/analyze` derives scores from sentiment, price history, forecasts, and fundamental predictions.
+
+The web dashboard includes a Recommendation view for submitting these analysis values and displaying the signal, confidence, risk score, target price, stop-loss, and rationale.
 
 ## Backend
 

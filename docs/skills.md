@@ -98,6 +98,14 @@ The portfolio optimizer is instantiated for each request. The current API respon
 
 ## System Routing
 
+The recommendation workflow combines normalized fundamental, technical, and sentiment scores through `backend/services/recommendation.py`.
+
+- **Input:** `fundamental_score`, `technical_score`, and `sentiment_score`, each from `0` to `1`
+- **API endpoint:** `POST /recommendation`
+- **Output:** Buy, Hold, or Sell signal with confidence, aggregate score, and rationale
+
+The structured recommendation workflow derives those scores from model outputs through `backend/services/analysis.py` and is exposed at `POST /recommendation/analyze`. It also returns available SMA, RSI, and MACD indicators for the supplied price history.
+
 The overall workflow is described in `docs/prompts/system.md`:
 
 1. Receive a user query or analysis dataset.

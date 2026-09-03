@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query
@@ -7,6 +8,17 @@ from pydantic import BaseModel, Field, model_validator
 
 from backend.services.market_data import MarketDataError, YahooFinanceProvider
 from backend.services.market_data_storage import MarketDataStorage
+from backend.services.analysis import (
+    fundamental_score,
+    moving_average_convergence_divergence,
+    relative_strength_index,
+    simple_moving_average,
+    sentiment_score,
+    technical_score,
+    volatility_score,
+    price_levels,
+)
+from backend.services.recommendation import generate_recommendation
 
 
 class SentimentRequest(BaseModel):
@@ -45,6 +57,19 @@ class PortfolioRequest(BaseModel):
         if any(len(row) != asset_count for row in self.cov_matrix):
             raise ValueError("cov_matrix must be square and match returns")
         return self
+
+
+class RecommendationRequest(BaseModel):
+    fundamental_score: float = Field(ge=0, le=1)
+    technical_score: float = Field(ge=0, le=1)
+    sentiment_score: float = Field(ge=0, le=1)
+
+
+class AnalysisRecommendationRequest(BaseModel):
+    sentiment: dict[str, float]
+    prices: list[float] = Field(min_length=3)
+    forecast: list[float] = Field(default_factory=list)
+    fundamentals: list[float] = Field(min_length=1)
 
 
 def _allowed_origins():
@@ -156,3 +181,65 @@ def optimize_portfolio(request: PortfolioRequest):
     optimizer = PortfolioOptimizer(request.returns, request.cov_matrix)
     weights = optimizer.optimize()
     return {"weights": np.asarray(weights).tolist()}
+
+
+@app.post("/recommendation")
+def recommendation(request: RecommendationRequest):
+    result = generate_recommendation(
+        request.fundamental_score,
+        request.technical_score,
+        request.sentiment_score,
+    )
+    return {
+        "signal": result.signal,
+        "confidence": result.confidence,
+        "score": result.score,
+        "rationale": result.rationale,
+    }
+
+
+@app.post("/recommendation/analyze")
+def analyze_recommendation(request: AnalysisRecommendationRequest):
+    derived_sentiment_score = sentiment_score(request.sentiment)
+    derived_technical_score = technical_score(request.prices, request.forecast)
+    derived_fundamental_score = fundamental_score(request.fundamentals)
+    risk_score = volatility_score(request.prices)
+    result = generate_recommendation(
+        derived_fundamental_score,
+        derived_technical_score,
+        derived_sentiment_score * (1 - risk_score * 0.25),
+    )
+    target_price, stop_loss = price_levels(
+        request.prices[-1], result.score, risk_score
+    )
+    indicators = {}
+    if len(request.prices) >= 5:
+        indicators["sma_5"] = round(simple_moving_average(request.prices, 5), 4)
+    if len(request.prices) > 14:
+        indicators["rsi_14"] = round(relative_strength_index(request.prices), 4)
+    if len(request.prices) >= 26:
+        indicators["macd"] = round(
+            moving_average_convergence_divergence(request.prices), 4
+        )
+    return {
+        "signal": result.signal,
+        "confidence": result.confidence,
+        "score": result.score,
+        "rationale": result.rationale,
+        "target_price": target_price,
+        "stop_loss": stop_loss,
+        "risk_score": round(risk_score, 4),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "evidence": {
+            "current_price": request.prices[-1],
+            "forecast": request.forecast,
+            "fundamentals": request.fundamentals,
+            "sentiment": request.sentiment,
+        },
+        "scores": {
+            "fundamental": round(derived_fundamental_score, 4),
+            "technical": round(derived_technical_score, 4),
+            "sentiment": round(derived_sentiment_score, 4),
+        },
+        "indicators": indicators,
+    }

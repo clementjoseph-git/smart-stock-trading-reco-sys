@@ -70,3 +70,15 @@ export async function optimizePortfolio(returns, cov_matrix) {
     body: JSON.stringify({ returns, cov_matrix })
   });
 }
+
+/**
+ * Recommendation from model outputs and price history
+ * @param {{sentiment: Object, prices: number[], forecast: number[], fundamentals: number[]}} data
+ */
+export async function analyzeRecommendation(data) {
+  return request("/recommendation/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+}

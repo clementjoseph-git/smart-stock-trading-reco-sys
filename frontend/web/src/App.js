@@ -16,6 +16,7 @@ import Sentiment from "./components/Sentiment";
 import Forecast from "./components/Forecast";
 import Fundamentals from "./components/Fundamentals";
 import Portfolio from "./components/Portfolio";
+import Recommendation from "./components/Recommendation";
 
 const drawerWidth = 240;
 
@@ -62,6 +63,11 @@ function App() {
                 <ListItemText primary="Portfolio" />
               </ListItemButton>
             </ListItem>
+            <ListItem disablePadding>
+              <ListItemButton component={Link} to="/recommendation">
+                <ListItemText primary="Recommendation" />
+              </ListItemButton>
+            </ListItem>
           </List>
         </Drawer>
 
@@ -72,6 +78,7 @@ function App() {
             <Route path="/forecast" element={<Forecast />} />
             <Route path="/fundamentals" element={<Fundamentals />} />
             <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/recommendation" element={<Recommendation />} />
             {/* Default route */}
             <Route path="/" element={<Sentiment />} />
           </Routes>

@@ -88,6 +88,78 @@ def test_market_data_can_persist_raw_and_processed_records(monkeypatch, tmp_path
     assert persisted["processed"].endswith(".json")
 
 
+def test_recommendation_combines_analysis_scores():
+    response = client.post(
+        "/recommendation",
+        json={
+            "fundamental_score": 0.9,
+            "technical_score": 0.8,
+            "sentiment_score": 0.7,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "signal": "BUY",
+        "confidence": 0.63,
+        "score": 0.815,
+        "rationale": [
+            "Positive fundamentals score",
+            "Positive technical trend score",
+            "Positive market sentiment score",
+        ],
+    }
+
+
+def test_recommendation_rejects_scores_outside_range():
+    response = client.post(
+        "/recommendation",
+        json={
+            "fundamental_score": 1.2,
+            "technical_score": 0.5,
+            "sentiment_score": 0.5,
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_structured_recommendation_derives_scores_and_indicators():
+    response = client.post(
+        "/recommendation/analyze",
+        json={
+            "sentiment": {"Positive": 0.8, "Negative": 0.1, "Neutral": 0.1},
+            "prices": list(range(1, 31)),
+            "forecast": [31.0, 32.0],
+            "fundamentals": [1.0, 1.5],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["signal"] == "BUY"
+    assert set(body["scores"]) == {"fundamental", "technical", "sentiment"}
+    assert set(body["indicators"]) == {"sma_5", "rsi_14", "macd"}
+    assert body["target_price"] > 0
+    assert body["stop_loss"] > 0
+    assert 0 <= body["risk_score"] <= 1
+    assert body["generated_at"].endswith("+00:00")
+    assert body["evidence"]["current_price"] == 30
+
+
+def test_structured_recommendation_rejects_short_prices():
+    response = client.post(
+        "/recommendation/analyze",
+        json={
+            "sentiment": {"Positive": 1.0},
+            "prices": [100.0, 101.0],
+            "fundamentals": [1.0],
+        },
+    )
+
+    assert response.status_code == 422
+
+
 def test_sentiment_accepts_json_body(monkeypatch):
     monkeypatch.setattr(main, "sentiment_model", FakeSentimentModel())
 

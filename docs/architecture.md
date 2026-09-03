@@ -54,6 +54,10 @@ The API entry point is `backend/api/main.py`. It initializes the sentiment, fore
 | `POST` | `/forecast` | Numeric `data` time series | `{ "forecast": [...] }` |
 | `POST` | `/fundamentals` | Feature matrix `X`, targets `y` | `{ "prediction": [...] }` |
 | `POST` | `/portfolio` | `returns`, `cov_matrix` | `{ "weights": [...] }` |
+| `POST` | `/recommendation` | Fundamental, technical, and sentiment scores from `0` to `1` | Signal, confidence, score, and rationale |
+| `POST` | `/recommendation/analyze` | Sentiment scores, prices, forecast, and fundamentals | Derived scores, indicators, signal, confidence, and rationale |
+
+The recommendation response also includes a volatility-based risk score, transparent target and stop-loss levels, UTC freshness metadata, and the input evidence used for the calculation.
 
 The Docker configuration runs the service with Uvicorn on port `8000`. FastAPI provides request parsing and validation through Python type annotations; explicit shared Pydantic request classes are not currently defined in the API module.
 
