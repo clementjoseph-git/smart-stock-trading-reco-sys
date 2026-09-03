@@ -13,18 +13,15 @@ class FakeSentimentModel:
 
 
 class FakeForecastModel:
-    def predict(self, model_input):
-        assert model_input.shape == (1, 3, 1)
-        return np.array([[101.0]])
+    def predict(self, values):
+        assert values == [99.0, 100.0, 101.0]
+        return [101.0]
 
 
 class FakeFundamentalsModel:
-    def train(self, features, targets):
-        self.features = features
-        self.targets = targets
-
     def predict(self, features):
-        return np.array([10.0, 20.0])
+        assert features == [[1.0, 2.0], [2.0, 3.0]]
+        return [10.0, 20.0]
 
 
 def test_health():
@@ -175,7 +172,7 @@ def test_forecast_accepts_json_body(monkeypatch):
     response = client.post("/forecast", json={"data": [99.0, 100.0, 101.0]})
 
     assert response.status_code == 200
-    assert response.json() == {"forecast": [[101.0]]}
+    assert response.json() == {"forecast": [101.0]}
 
 
 def test_fundamentals_accepts_json_body(monkeypatch):

@@ -1,6 +1,8 @@
 import pytest
 
 from backend.services.huggingface import (
+    HuggingFaceForecast,
+    HuggingFaceFundamentals,
     HuggingFaceInference,
     HuggingFaceInferenceError,
     HuggingFaceSentiment,
@@ -46,3 +48,34 @@ def test_huggingface_sentiment_normalizes_labels():
 def test_huggingface_requires_server_side_token():
     with pytest.raises(HuggingFaceInferenceError, match="HF_API_TOKEN"):
         HuggingFaceInference(token=None, session=FakeSession()).classify("Test")
+
+
+class FakeNumericInference:
+    def predict(self, payload, model=None):
+        assert payload["inputs"]["data"] == [100.0, 101.0]
+        assert payload["inputs"]["task"] == "forecast"
+        assert model == "forecast-model"
+        return {"forecast": [102.0, 103.0]}
+
+
+def test_huggingface_forecast_normalizes_numeric_response():
+    result = HuggingFaceForecast(
+        inference=FakeNumericInference(), model="forecast-model"
+    ).predict([100.0, 101.0])
+
+    assert result == [102.0, 103.0]
+
+
+class FakeFundamentalsInference:
+    def predict(self, payload, model=None):
+        assert payload["inputs"]["data"] == [[1.0, 2.0]]
+        assert payload["inputs"]["task"] == "fundamentals"
+        return {"predictions": [{"value": 10.0}]}
+
+
+def test_huggingface_fundamentals_normalizes_prediction_response():
+    result = HuggingFaceFundamentals(
+        inference=FakeFundamentalsInference(), model="fundamentals-model"
+    ).predict([[1.0, 2.0]])
+
+    assert result == [10.0]

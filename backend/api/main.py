@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field, model_validator
 from backend.services.market_data import MarketDataError, YahooFinanceProvider
 from backend.services.market_data_storage import MarketDataStorage
 from backend.services.huggingface import (
+    HuggingFaceForecast,
+    HuggingFaceFundamentals,
     HuggingFaceInferenceError,
     HuggingFaceSentiment,
 )
@@ -109,18 +111,14 @@ def _get_sentiment_model():
 def _get_forecast_model():
     global forecast_model
     if forecast_model is None:
-        from ml.technicals.lstm_forecaster import LSTMForecaster
-
-        forecast_model = LSTMForecaster()
+        forecast_model = HuggingFaceForecast()
     return forecast_model
 
 
 def _get_fundamentals_model():
     global fundamentals_model
     if fundamentals_model is None:
-        from ml.fundamentals.fundamentals_pipeline import FundamentalsModel
-
-        fundamentals_model = FundamentalsModel()
+        fundamentals_model = HuggingFaceFundamentals()
     return fundamentals_model
 
 
@@ -167,17 +165,22 @@ def analyze_sentiment(request: SentimentRequest):
 
 @app.post("/forecast")
 def forecast_stock(request: ForecastRequest):
-    model_input = np.array(request.data).reshape(1, len(request.data), 1)
-    prediction = _get_forecast_model().predict(model_input)
-    return {"forecast": np.asarray(prediction).tolist()}
+    try:
+        prediction = _get_forecast_model().predict(request.data)
+        return {"forecast": prediction}
+    except HuggingFaceInferenceError as error:
+        status_code = 429 if "rate limit" in str(error).lower() else 502
+        raise HTTPException(status_code=status_code, detail=str(error)) from error
 
 
 @app.post("/fundamentals")
 def fundamentals_analysis(request: FundamentalsRequest):
-    model = _get_fundamentals_model()
-    model.train(request.X, request.y)
-    prediction = model.predict(request.X)
-    return {"prediction": np.asarray(prediction).tolist()}
+    try:
+        prediction = _get_fundamentals_model().predict(request.X)
+        return {"prediction": prediction}
+    except HuggingFaceInferenceError as error:
+        status_code = 429 if "rate limit" in str(error).lower() else 502
+        raise HTTPException(status_code=status_code, detail=str(error)) from error
 
 
 @app.post("/portfolio")

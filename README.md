@@ -59,7 +59,7 @@ The web dashboard includes a Recommendation view for submitting these analysis v
 
 The FastAPI service is defined in `backend/api/main.py` and runs on port `8000` with Uvicorn. The Docker entry point is maintained in `deployment/docker/Dockerfile`.
 
-Sentiment inference uses a hosted Hugging Face model through the backend gateway. Set `HF_API_TOKEN` and, optionally, `HF_SENTIMENT_MODEL` in the server environment; never expose the token to the browser.
+Sentiment, forecasting, and fundamentals inference use configurable hosted Hugging Face models through the backend gateway. Set `HF_API_TOKEN`, `HF_SENTIMENT_MODEL`, `HF_FORECAST_MODEL`, and `HF_FUNDAMENTALS_MODEL` in the server environment; never expose the token to the browser.
 
 ## Frontend Configuration
 

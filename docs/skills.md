@@ -37,9 +37,9 @@ The project separates trading workflows into domain-specific skills. The intende
 | Skill | Intended entry point | Current implementation | Primary input | Primary output |
 | --- | --- | --- | --- | --- |
 | Data ingestion | `skills/data_ingestion.py` | `backend/services/market_data.py` | Symbol, period, and interval | Normalized OHLCV history |
-| Sentiment analysis | `skills/sentiment_analysis.py` | `ml/sentiment/finbert_pipeline.py` | Financial text | Sentiment result |
-| Technical analysis | `skills/technical_analysis.py` | `ml/technicals/lstm_forecaster.py` | Numeric price series | Forecast values |
-| Fundamental analysis | `skills/fundamental_analysis.py` | `ml/fundamentals/fundamentals_pipeline.py` | Feature matrix `X`, targets `y` | Prediction values |
+| Sentiment analysis | `skills/sentiment_analysis.py` | `backend/services/huggingface.py` | Financial text | Sentiment result |
+| Technical analysis | `skills/technical_analysis.py` | `backend/services/huggingface.py` | Numeric price series | Forecast values |
+| Fundamental analysis | `skills/fundamental_analysis.py` | `backend/services/huggingface.py` | Feature matrix `X`, targets `y` | Prediction values |
 | Portfolio optimization | `skills/portfolio_optimization.py` | `ml/portfolio/portfolio_optimizer.py` | Expected returns and covariance matrix | Asset weights |
 
 ## Data Ingestion
@@ -65,7 +65,7 @@ The sentiment workflow accepts a headline or other financial text and delegates 
 
 ## Technical Analysis and Forecasting
 
-The technical workflow accepts a numeric time series and uses the LSTM forecaster in `ml/technicals/lstm_forecaster.py`.
+The technical workflow accepts a numeric time series and sends it to the configured hosted Hugging Face forecasting model through `backend/services/huggingface.py`.
 
 - **Input:** `data`, a numeric price series
 - **API endpoint:** `POST /forecast`
@@ -83,7 +83,7 @@ The fundamentals workflow trains and evaluates the fundamentals model in `ml/fun
 - **Output:** `{ "prediction": [...] }`
 - **Prompt reference:** `docs/prompts/fundamentals.md`
 
-The current endpoint trains the model during the request and then predicts against `X`. A production workflow should separate training from online inference and manage model versions explicitly.
+The current endpoint sends feature data to the configured hosted Hugging Face fundamentals model. The model ID and token are server-side configuration; training and model version management remain outside this application.
 
 ## Portfolio Optimization
 

@@ -31,7 +31,7 @@ flowchart LR
     ML --> API
 ```
 
-The first market-data provider is Yahoo Finance through `backend/services/market_data.py`. The API normalizes its chart response into timestamped OHLCV records. Sentiment inference is routed through the hosted Hugging Face gateway in `backend/services/huggingface.py`; its token remains server-side. Database persistence and additional providers remain planned.
+The first market-data provider is Yahoo Finance through `backend/services/market_data.py`. The API normalizes its chart response into timestamped OHLCV records. Sentiment, forecasting, and fundamentals inference are routed through configurable hosted Hugging Face models in `backend/services/huggingface.py`; the token remains server-side. Database persistence and additional providers remain planned.
 
 ## Request Flow
 
